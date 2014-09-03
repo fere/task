@@ -1,0 +1,587 @@
+
+Documentation()
+ AN_050203_0818
+  Start
+    Печать информации о контрольной марке
+  End
+CHS_051012_01600+{
+ Расширил поле Товар, добавил 2 секции, показывающие длинное описание.
+CHS_051012_01600+}
+
+SG_051214_$01979
+  Start
+    В неучтенном заказе продажи скидка документа расчитывается из суммы д-та с НДС, а в учтеной с-Ф НДС исключается из расчета.
+    Поскольку принято показывать скидку счета с суммы без НДС, правилась печать ТОРГ-12 из неучтеного д-та. В случае установленного
+    признака "цены включают НДС", после расчета скидки по сумме счета с НДС из расчитаной скидки исключается сумма НДС.
+    Изменен триггер Header-OnAfterGetRecord.
+  End
+SG_060314_$02489
+  Start
+    Печать ТОРГ-12 для ЗПр при продаже ОС.
+  End
+SG_060317_$02502
+  Start
+    Увеличена длинна полей, отвечающих за адрес фирмы (CompanyInfo)
+  End
+
+CHS_060504_02736+{
+  В Request Form добавлено поле "Список Версий". В секции добавлено поле "Вид Товара". Печатается в зависимости от
+  значения "Списка Версии".
+CHS_060504_02736+}
+
+CHS_061018_03818+{
+  Значение для Основания берется из "Sales Header".Foundation. Если поле не заполнено, то берется по-старому.
+CHS_061018_03818+}
+
+PV_070330_$04935+{
+  Длина BillToAddress изменена со 100 до 120 символов
+PV_070330_$04935+}
+
+
+CHS_070716_05703+{
+  В поле Грузоотправитель и его адрес, в качестве грузоотправителя печатается наименование Грузоотправителя
+  из поля Поставка Название, на закладке Доставки карточки Фирмы Информации.
+  Если оно пустое - выдавается сообщение «Заполните поле Поставка Название на закладке Доставка в Фирма Информация
+  значение первичного ключа - такое-то…»
+CHS_070716_05703+}
+
+//rmv_071019_06758+{
+  При печати товарного чека - возможность выбрать фирму от которой печатать
+//rmv_071019_06758+}
+
+SG_071207_$07220
+  Start
+    Добавлен элемент на секшен для приведения в соответствие с формой в Консультанте
+  End
+
+CHS_080312_08176+{
+  Разделил Скидку\Наценку на Реквест Форме.
+  Печать теперь в зависимости от комбинации этих двух галок.
+CHS_080312_08176+}
+
+VNR_080411_$08447 - поменал шрифт в строках документа на моноширинный Courier New (9) для более надежного переноса сток в описании
+
+CHS_080422_08598+{
+  Расширил значение переменных  BilltoAdress и BillToName до 250 символов
+CHS_080422_08598+}
+
+BAV_080617_08977+{
+  Добавлено заполнение полей, связанных с доверенностью из таблицы 14905 (если в ней есть данные)
+  Добавлена печать кол-ва листов Приложения (по аналогии с ТТН)
+BAV_080617_08977+}
+
+BAV_080627_09043+{
+  Добавлена печать сведений о документе-основании, поправлена печать должности DelivedJobTitle
+BAV_080627_09043+}
+
+BAV_081201_10155+ Печать ОКПО Грузополучателя из адреса поставки(если в АП ОКПО заполнено)
+
+PV_090416_$10955+{
+  CopyCycle, Body (4)
+    В Грузоотправитель вместо
+ CompanyInfo.Name+' '+CompanyInfo."Name 2"+CompanyInfo."Ship-to Address"+' '+CompanyInfo."Ship-to Address 2"
+    выводим:
+ CompanyInfo."Ship-to Name"+' '+CompanyInfo."Ship-to Name 2"+' '+CompanyInfo."Ship-to Address"+' '+CompanyInfo."Ship-to Address 2"
+PV_090416_$10955+}
+
+DP_110228_$14258+ На секциях: CopyCycle, Body (3),(4) добавлена вторая строчка для грузоотправителя
+
+DP_110408_$14425+ Global Var SalesLineTxtValues 100 -> 104
+DP_111213_$15185+{
+  SaveValues RequestForm'ы сброшено в <No>
+  На секциях в грузоотправителе прописана переменная CargoSender
+DP_111213_$15185+}
+DP_120126_$15355+ SaveValues RequestForm'ы восстановлено в Yes
+
+PV_120130_$15364+{
+  Убрал вывод "Адрес склада не алкоголя" на реквест-форме (Visible=No)
+  Изменил код по корру 15185
+PV_120130_$15364+}
+PV_140311_$16871 SalesLineTxtValues 104 -> 250
+
+Header - OnPreDataItem()
+SalesSetup.GET;
+AddConditionCurrency := CONVERTSTR(SalesSetup."Invoice Comment", '\', ' ');
+
+//MV_080411_$08504+{ <- //AN_040601+{
+IF bOuterFilter THEN BEGIN
+//SHM_040810-  SETRANGE("Document Type", "Document Type"::Order);
+  SETRANGE("No.", DocFilter);
+END;
+//MV_080411_$08504+} <- //AN_040601+}
+
+Header - OnAfterGetRecord()
+//DP_120203_$15383- SetDoc("No.", 1); //PV_120130_$15364+
+SetDoc("No.", CopiesNumber); //DP_120203_$15383+
+
+IsFA := CheckFAOper(Header);     //SG_060314_$02489+
+//AN_040301+{
+IF PrintFromCompany='' THEN //rmv_071019_06758+
+  CompanyInfo.FindCompany("Shortcut Dimension 1 Code", "Shortcut Dimension 2 Code", FALSE)
+//rmv_071019_06758+{
+ELSE
+  CompanyInfo.FindCompanyOnDate(PrintFromCompany, PrintFromCompany, FALSE, Header."Posting Date");
+//rmv_071019_06758+}
+
+//CHS_070716_05703+{
+IF  CompanyInfo."Ship-to Name"='' THEN
+  ERROR(Text50011, CompanyInfo."No.", CompanyInfo."Start Action Date");
+//CHS_070716_05703+}
+
+//DP_111213_$15185+{
+//PV_120130_$15364- IF UseNonAlcoStockAddr THEN BEGIN
+IF UseNonAlcoStockAddr2 THEN BEGIN //PV_120130_$15364+
+  Location.GET("Location Code");
+  //PV_121011_$16003- NonAlcoStockAddr := Location."Address 2";
+  NonAlcoStockAddr := Location."NonAlco Stock Address"; //PV_121011_$16003+
+  CargoSender := CompanyInfo."Ship-to Name" + ' ' + CompanyInfo."Ship-to Name 2"
+  + NonAlcoStockAddr;
+END ELSE
+  CargoSender := CompanyInfo."Ship-to Name" + ' ' + CompanyInfo."Ship-to Name 2"
+  + CompanyInfo."Ship-to Address" + ' ' + CompanyInfo."Ship-to Address 2";
+//DP_111213_$15185+}
+
+//MV_130821_$16584+{
+IF bPrintVATKPPinSender THEN BEGIN
+  IF STRLEN(CargoSender) <> 0 THEN CargoSender += ' ';
+  CargoSender += 'ИНН: '+CompanyInfo."VAT Registration No." + ', КПП: '+CompanyInfo."KPP Code";
+END;
+CargoReceiver := StandRepManagement.GetCustInfo(Header."Document Type",Header."No.",0,1) + ' ' +
+StandRepManagement.AllowPrint(StandRepManagement.GetCustInfo(Header."Document Type",Header."No.",1,1), 
+NOT (DontPrintDeliveryAddr));
+IF bPrintVATKPPinReceiver THEN
+  IF (Header."Print Customer No." <> '') THEN BEGIN
+    IF Cust.GET(Header."Sell-to Customer No.") THEN BEGIN
+      IF STRLEN(CargoReceiver) <> 0 THEN CargoReceiver += ', ';
+      CargoReceiver += StandRepManagement.GetCustomerVAT_KPP(Cust."No.", Header."Print Ship-to Code");
+    END;
+  END;
+//MV_130821_$16584+}
+
+//AN_040301+}
+//CompanyInfo.GET; //AN_040209-{}
+CLEAR(TotalArray); //rmv +
+CompanyInfo.CALCFIELDS(Picture);//rmv+040316-{}
+//RMV_041119_$0462+
+{//VK_050331_$01018-
+IF CtrlMarkSert.GET(Header."Control Mark Sertificate Code") THEN BEGIN
+  IF CtrlMarkSert.Address<>'' THEN BEGIN
+    CompanyInfo."Ship-to Address":=COPYSTR(CtrlMarkSert.Address, 1, MAXSTRLEN(CtrlMarkSert.Address));
+    CompanyInfo."Ship-to Address 2":='';
+  END;
+END;
+//RMV_041119_$0462+}
+GetShipToAddress;                                            //VK_050331_$01018+
+//AN_050203_0818+{
+IF (Header."Control Mark No." <> 0) AND (Header."Control Mark Series" <> '') THEN
+  ControlMarkData := STRSUBSTNO(Text50002, Header."Control Mark Series", Header."Control Mark No.")
+ELSE
+  ControlMarkData := Text50000;
+//AN_050203_0818+}
+//VK_050331_$01018-}
+//RMV_040419+{
+CASE PrintAs OF
+  PrintAs::Shipment:
+    DocName:='ТОВАРНАЯ НАКЛАДНАЯ';
+  PrintAs::Check:
+    DocName:='ТОВАРНЫЙ ЧЕК';
+END;
+//RMV_040419+}
+
+IF CompanyInfo."Bank Account No." <> '' THEN
+  SettlBankAccount := STRSUBSTNO(
+    Text14803,
+    CompanyInfo."Bank BIC",
+    CompanyInfo."Bank Account No.")
+ELSE
+  SettlBankAccount := '';
+
+Cust.GET("Bill-to Customer No.");
+
+AmountInvoiceCurrent := AmountInvoiceDone;
+IF "Currency Code" = '' THEN
+  AmountInvoiceCurrent := AmountInvoiceCurrent::LCY;
+
+ShowDiscount := FALSE;
+
+StandRepManagement.SetFA(IsFA);  //SG_060314_$02489+
+StandRepManagement.SetupVariables((AmountInvoiceCurrent <> AmountInvoiceCurrent::"Invoce Currency"),FALSE);
+
+{//Free$TyleR
+IF SalesLine1.FIND('-') THEN
+  REPEAT
+    MESSAGE('Found %1',SalesLine1.Description);
+  UNTIL SalesLine1.NEXT()=0
+ELSE
+  MESSAGE('Didnot Find');
+}
+
+//RMV- StandRepManagement.GetSalesDoc("Document Type","No.",  SalesLine1,AmountInvDiscount,ShowDiscount,QtyType::Shipping);
+StandRepManagement.GetSalesDoc("Document Type","No.",  SalesLine1,AmountInvDiscount,ShowDiscount,QtyType::General);//RMV+
+
+StandRepManagement.SetSalesSource("Document Type","No."); //AN_050408_01054+
+
+CASE "Document Type" OF
+  "Document Type"::Order:
+    BEGIN
+      ReasonType := ReasonType::Заказ;
+      ReasonNo := "No.";
+      ReasonData := "Order Date";
+    END;
+  "Document Type"::Invoice:
+    BEGIN
+      ReasonType := ReasonType::Счет;
+      ReasonNo := "No.";
+      ReasonData := "Posting Date";
+    END;
+  ELSE
+    BEGIN
+      ReasonType := ReasonType::" ";
+      ReasonNo := '';
+      ReasonData := 0D;
+    END;
+END;
+
+//BAV_080627_09043+{
+CLEAR(DocSign);
+//IF ShowDocSigns THEN
+BEGIN
+//BAV_081021_09873+{
+IF DocumentSignature.GET(Header."Shipping Sign 1") THEN
+DocSign[1]:=DocumentSignature.Description;
+//BAV_081021_09873+}
+IF DocumentSignature.GET(Header."Shipping Sign 2") THEN
+DocSign[2]:=DocumentSignature.Description;
+
+END;
+
+//BAV_080627_09043+}
+
+IF AmountInvoiceCurrent = AmountInvoiceCurrent::LCY THEN BEGIN
+  ReportCurrCode := '';
+  AddCondition := '';
+END ELSE BEGIN
+  ReportCurrCode := "Currency Code";
+  IF NOT Currency.GET("Currency Code") THEN
+    Currency.Description := 'доллар США';
+  AddCondition :=
+    COPYSTR(
+      STRSUBSTNO(
+        AddConditionCurrency,
+        LOWERCASE(Currency.Description)),
+      1,MAXSTRLEN(AddCondition));
+END;
+
+//VK_050217_$0868+{
+IF PrintAs = PrintAs::Check THEN BEGIN
+  Reason := 'Чек ККТ от ' + FORMAT("Shipment Date");
+  Utv := '';
+  INNSell:='ИНН ' +  CompanyInfo."VAT Registration No." + ' КПП ' + CompanyInfo."KPP Code"
+END ELSE BEGIN
+  //ES_100204$12690- Reason := StandRepManagement.GetAgreementInfo(Header."Agreement No.");
+  //ES_100204$12690+{
+  Reason := StandRepManagement.GetAgreementInfo(StandRepManagement.CaseAgreement("Sell-to Customer No.", "Print Customer No.",
+            "Cash Sale", "Agreement No.", "Print Agreement No."));
+  //ES_100204$12690+}
+  Utv :=  'Унифицированная форма № ТОРГ-12\Утверждена постановлением Госкомстата России\от 25.12.98 № 132';
+END;
+//VK_050217_$0868+}
+
+
+//Free$TyleR_051114_$01730+{
+CLEAR(SalesLine);
+CLEAR(TotalSalesLine);
+  TempSalesLine.DELETEALL;
+  CLEAR(TempSalesLine);
+  CLEAR(SalesPost);
+  SalesPost.GetSalesLines(Header, TempSalesLine, 0);
+  CLEAR(SalesPost);
+SalesLine.CalcVATAmountLines(0, Header, TempSalesLine, TempVATAmountLine1);
+
+SalesPost.SumSalesLinesTemp(
+  Header,TempSalesLine,0,TotalSalesLine[1],TotalSalesLineLCY[1],
+  VATAmount[1],VATAmountText[1],ProfitLCY[1],ProfitPct[1]);
+//Free$TyleR_051114_$01730+}
+
+//SG_051214_$01979+{
+IF Header."Currency Code" = '' THEN
+  Currency.InitRoundingPrecision
+ELSE
+  Currency.GET("Currency Code");
+
+TempSalesLine.RESET;
+IF TempSalesLine.FIND('-') THEN;
+  REPEAT
+    CASE TRUE OF//CHS_080312_08176+
+      (PrintDisc AND PrintDisc2)://CHS_080312_08176+
+        BEGIN //CHS_080312_08176+
+          IF Header."Prices Including VAT" THEN
+            InvDiscAmount := InvDiscAmount + TempSalesLine."Inv. Discount Amount" / (1 + TempSalesLine."VAT %" / 100)
+          ELSE
+            InvDiscAmount := InvDiscAmount + TempSalesLine."Inv. Discount Amount";
+        END;//CHS_080312_08176+
+      //CHS_080312_08176+{
+      (PrintDisc AND NOT PrintDisc2): //Только скидка
+        BEGIN
+            //Убираем наценку
+            IF Header."Prices Including VAT" THEN
+              InvDiscAmount :=InvDiscAmount+Header."Invoice Margin Value" +
+              TempSalesLine."Inv. Discount Amount" / (1 + TempSalesLine."VAT %" / 100)
+            ELSE
+              InvDiscAmount :=InvDiscAmount+Header."Invoice Margin Value"  + TempSalesLine."Inv. Discount Amount";
+        END;
+      (NOT PrintDisc AND PrintDisc2): //Только наценка
+        BEGIN
+            //Убираем скидку
+            IF Header."Prices Including VAT" THEN
+              InvDiscAmount :=InvDiscAmount -Header."Invoice Discount Value 2"
+               + TempSalesLine."Inv. Discount Amount" / (1 + TempSalesLine."VAT %" / 100)
+            ELSE
+              InvDiscAmount :=InvDiscAmount -Header."Invoice Discount Value 2"
+               + TempSalesLine."Inv. Discount Amount";
+        END;
+      //CHS_080312_08176+}
+    END;//CHS_080312_08176+
+  UNTIL TempSalesLine.NEXT = 0;
+
+InvDiscAmount := ROUND(InvDiscAmount,Currency."Amount Rounding Precision");
+//SG_051214_$01979+{
+
+//Free$TyleR_060306_$02369+{
+Agreement.RESET;
+AgrNo := '';
+AgrDate := 0D;
+{//ES_100204$12690-
+IF Header."Agreement No." <> '' THEN
+  IF Agreement.GET(Header."Agreement No.") THEN BEGIN
+}//ES_100204$12690-
+  //ES_100204$12690+{
+  IF Agreement.GET(StandRepManagement.CaseAgreement("Sell-to Customer No.", "Print Customer No.",
+            "Cash Sale", "Agreement No.", "Print Agreement No.")) THEN BEGIN
+  //ES_100204$12690+}
+    AgrNo := Agreement."Contract Number";
+    //MV_070608_$05400+{
+    IF AgrNo = '' THEN
+      AgrNo := Agreement.Code;
+    //MV_070608_$05400+}
+    AgrDate := Agreement."Document Date";
+  END;
+//Free$TyleR_060306_$02369+}
+
+//CHS_061018_03818+{
+IF Foundation<>'' THEN
+  Foundation_txt:=Foundation
+ELSE
+  //ES_100204$12690- Foundation_txt:=StandRepManagement.GetAgreementInfo2(Header, Header."Agreement No.") ;
+  //ES_100204$12690+{
+  Foundation_txt := StandRepManagement.GetAgreementInfo(StandRepManagement.CaseAgreement("Sell-to Customer No.",
+  "Print Customer No.", "Cash Sale", "Agreement No.", "Print Agreement No."));
+  //ES_100204$12690+}
+//CHS_061018_03818+}
+
+//BAV_080617_08977+{
+
+IF NOT HandInputCert THEN BEGIN
+  Cert_Numb := StandRepManagement.CalcDocPickPrintImages(DATABASE::"Sales Line", "Document Id");
+  IF Cert_Numb = 0 THEN BEGIN
+    SalesLine.SETRANGE("Document Type", "Document Type");
+    SalesLine.SETRANGE("Document No.", "No.");
+    SalesLine.SETRANGE(Type, SalesLine.Type::Item);
+    IF SalesLine.FIND('-') THEN REPEAT
+      Item.GET(SalesLine."No.");
+      CASE Item."Big Item Kind" OF
+        Item."Big Item Kind"::Tabac: Cert_Numb +=2;
+        Item."Big Item Kind"::Alcohol: Cert_Numb += 3;
+        ELSE Cert_Numb += 1;
+      END;
+    UNTIL SalesLine.NEXT = 0;
+  END;
+END;
+CASE Cert_Numb OF
+  0: sheetcounttext := 'отсутствует';
+  1: sheetcounttext := 'на одном листе';
+  ELSE sheetcounttext := 'на ' + LocMgt.num_0to999999(Cert_Numb, gender::m) +' листах';
+END;   
+
+CLEAR(AttorneyDate);
+CLEAR(AttorneyGiven);
+lAttorneyPowerLine.RESET;
+lAttorneyPowerLine.SETCURRENTKEY(Type, "No.");
+lAttorneyPowerLine.SETRANGE(lAttorneyPowerLine.Type,lAttorneyPowerLine.Type::Doc);
+lAttorneyPowerLine.SETRANGE(lAttorneyPowerLine."No.","No.");
+lAttorneyPowerLine.SETFILTER(lAttorneyPowerLine."Attorney Power No.",'<>%1','');
+lAttorneyPowerLine.SETRANGE(lAttorneyPowerLine."Attorney Power Type",lAttorneyPowerLine."Attorney Power Type"::Internal);
+IF lAttorneyPowerLine.FIND('-') THEN
+lAttorneyPower.GET(lAttorneyPower."Attorney Power Type"::Internal,lAttorneyPowerLine."Attorney Power No.");
+AttorneyNo:=lAttorneyPower."External Power No.";
+AttorneyDate:=lAttorneyPower."External Power Date";
+AttorneyDateText:=LocMgt.Date2Text(AttorneyDate);
+AttNo := lAttorneyPower."No."; //PV_111123_$15160+
+IF lAttorneyPower."Ext. Attorney Power Given"<>'' THEN AttorneyGiven:=lAttorneyPower."Ext. Attorney Power Given";
+//ELSE IF lAttorneyPower."Attorney To Name"<>'' THEN AttorneyGiven:=lAttorneyPower."Attorney To Name";
+IF lAttorneyPower."Person Name"<>'' THEN DriverReceivedFullName:=lAttorneyPower."Person Name";
+IF lAttorneyPower."G/L Employee No."<>'' THEN
+BEGIN
+  RiPerson.RESET;
+  RiPerson.SETRANGE(RiPerson."No.",lAttorneyPower."G/L Employee No.");
+  RiPerson.SETFILTER(RiPerson.Type,'%1|%2',RiPerson.Type::External,RiPerson.Type::Driver);
+  IF RiPerson.FIND('-') THEN IF RiPerson."Job Title"<>'' THEN ReceivedJobTitle:=RiPerson."Job Title";
+END;  
+
+//BAV_080617_08977+}
+
+//IF_061207_$4151+{
+IF PrintBillToCust THEN BEGIN
+  BillToName := "Bill-to Name";
+  IF BillToCust.GET ("Bill-to Customer No.") THEN
+    BillToAddress := BillToCust.Address + BillToCust."Address 2"
+  ELSE
+    BillToAddress := '';
+END ELSE BEGIN
+  BillToName := StandRepManagement.GetCustInfo(Header."Document Type",Header."No.",0,2);
+  BillToAddress := StandRepManagement.GetCustInfo(Header."Document Type",Header."No.",1,0);
+END;
+//IF_061207_$4151+}
+
+GetDriversData(); //MV_101015_$13762+
+//PV_111005_$15059+{
+IF bPrintUserID THEN
+  TxtUserID := USERID + ' ' + FORMAT(CURRENTDATETIME)
+ELSE
+  TxtUserID := '';
+//PV_111005_$15059+}
+
+Header - OnPostDataItem()
+
+GetShipToAddress()
+//VK_050331_$01018+{
+nAddr:=CompMgt.GetAccreditationAddress(Header."Control Mark Sertificate Code",Header."Shipment Date");
+IF nAddr<>'' THEN BEGIN
+  CompanyInfo."Ship-to Address":=nAddr;
+  CompanyInfo."Ship-to Address 2":='';
+END;
+//VK_050331_$01018+}
+
+CheckUnprofileItem(pItemNo : Code[20]) : Boolean
+lInventorySetup.GET();
+IF lInventorySetup."Unprofile Item" = '' THEN EXIT(TRUE) ELSE BEGIN
+ lItem.SETFILTER("Inventory Posting Group",lInventorySetup."Unprofile Item");
+ lItem.SETRANGE("No.",pItemNo);
+ IF lItem.FIND('-') THEN EXIT(FALSE) ELSE EXIT(TRUE);
+END;
+
+CheckFAOper(SH : Record "Sales Header") : Boolean
+//SG_060314_$02489+{
+WITH lSalesLine DO BEGIN
+lSalesLine.RESET;
+  SETRANGE("Document Type",SH."Document Type");
+  SETRANGE("Document No.",SH."No.");
+  SETRANGE(Type,Type::"Fixed Asset");
+  IF FIND('-') THEN
+    EXIT(TRUE);
+END;
+
+EXIT(FALSE);
+//SG_060314_$02489+}
+
+SetDoc(DocNo : Code[20];Cop : Integer)
+//MV_080411_$08504+{} <- //AN_040601+{}
+UseNonAlcoStockAddr2 := FALSE; //SHM_121214_$16173+
+CopiesNumber := Cop; //SHM+
+CLEAR(DBMgmt);
+HostName := DBMgmt.GetCachedHostName;
+PrinterSelection.RESET;
+IF PrinterSelection.GET(USERID,HostName,12418) THEN BEGIN
+  CopiesNumber := PrinterSelection.Copies;
+  StartType := StartType::Hyperlink;
+  //MESSAGE('0K');
+END;
+
+bOuterFilter := TRUE;
+DocFilter := DocNo;
+
+//DP_111213_$15185+{
+_SalesLine.SETRANGE("Document Type", _SalesLine."Document Type"::Order);
+_SalesLine.SETRANGE("Document No.", DocNo);
+_SalesLine.SETRANGE("Big Item Kind", _SalesLine."Big Item Kind"::Alcohol);
+IF _SalesLine.ISEMPTY THEN BEGIN
+  _SalesHeader.GET(_SalesHeader."Document Type"::Order, DocNo);
+  _Location.GET(_SalesHeader."Location Code");
+  //PV_121011_$16003- IF _Location."Address 2" <> '' THEN BEGIN
+  IF _Location."NonAlco Stock Address" <> '' THEN BEGIN //PV_121011_$16003+
+    //DP_120126_$15355- UseNonAlcoStockAddr := TRUE;
+    UseNonAlcoStockAddr2 := TRUE; //DP_120126_$15355+
+    //PV_121011_$16003- NonAlcoStockAddr := _Location."Address 2";
+    NonAlcoStockAddr := _Location."NonAlco Stock Address"; //PV_121011_$16003+
+  END;
+END;
+//DP_111213_$15185+}
+
+GetDriversData()
+//MV_101015_$13762+{}
+  RiPerson.RESET;
+  IF DelivedCode <> '' THEN BEGIN
+    RiPerson.SETRANGE("No.", DelivedCode);
+    IF NOT RiPerson.FIND('-') THEN
+      ERROR(Text50012, DelivedCode)
+    ELSE BEGIN
+      DelivedFullName := RiPerson."Full Name";
+      DelivedJobTitle := RiPerson."Job Title";     //rkd_080603_$08874+
+    END;
+  //PV_110217_$14247+{
+  END ELSE BEGIN
+    DelivedFullName := '';
+    DelivedJobTitle := '';
+  //PV_110217_$14247+}
+  END;
+
+  RiPerson.RESET;
+  IF DriverReceivedCode <> '' THEN BEGIN
+    RiPerson.SETRANGE("No.", DriverReceivedCode);
+    IF NOT RiPerson.FIND('-') THEN
+      ERROR(Text50012, DriverReceivedCode)
+    ELSE BEGIN
+      DriverReceivedFullName := RiPerson."Full Name";
+      ReceivedJobTitle := RiPerson."Job Title";     //rkd_080603_$08874+
+    END;
+  //PV_110217_$14247+{
+  END ELSE BEGIN
+    IF AttNo = '' THEN BEGIN //PV_111123_$15160+
+      DriverReceivedFullName := '';
+      ReceivedJobTitle := '';
+    END; //PV_111123_$15160+
+  //PV_110217_$14247+}
+  END;
+
+DecToTextRounded(_DecValue : Decimal) _TextValue : Text[250]
+//DP_120126_$15316+{}
+IF ROUND(_DecValue) = _DecValue THEN
+  _TextValue := LocMgt.Decimal2Text(_DecValue, 2, 2, FALSE)
+ELSE IF ROUND(_DecValue, 0.001) = _DecValue THEN
+  _TextValue := LocMgt.Decimal2Text(_DecValue, 2, 3, FALSE)
+ELSE
+  _TextValue := LocMgt.Decimal2Text(_DecValue, 2, 4, FALSE);
+
+DecRounded(_DecValue : Decimal) _Ret : Decimal
+//MV_130812_$16523+{}
+IF ROUND(_DecValue) = _DecValue THEN
+  _Ret := ROUND(_DecValue)
+ELSE IF ROUND(_DecValue, 0.001) = _DecValue THEN
+  _Ret := ROUND(_DecValue, 0.001)
+ELSE
+  _Ret := ROUND(_DecValue, 0.0001);
+
+GetItemBarCode(Item : Record Item)
+//VK_050221_$0780+{
+FOR i:=1 TO 3 DO
+  ItemBarCode[i]:='';
+i:=1;
+ItemCrossRef.SETRANGE("Item No.",Item."No.");
+ItemCrossRef.SETRANGE("Unit of Measure",Item."Base Unit of Measure");
+ItemCrossRef.SETRANGE("Cross-Reference Type",ItemCrossRef."Cross-Reference Type"::"Bar Code");
+IF ItemCrossRef.FIND('-') THEN
+  REPEAT;
+    ItemBarCode[i]:=ItemCrossRef."Cross-Reference No.";
+    i+=1;
+  UNTIL((ItemCrossRef.NEXT=0) OR (i>3))
+//VK_050221_$0780+}
