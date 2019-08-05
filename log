@@ -7,3 +7,6 @@ TRANSLATION 81 10000
  ([Expression]) AS [Выражение], ([Expression Type]) AS [Тип Выражения], ([Company Name]) AS [Организация Название], ([Company BIC]) AS [Организация БИК], ([Company Account No_]) AS [Организация Счет Но_], ([KBK]) AS [КБК], ([OKATO]) AS [ОКАТО], ([Period Code]) AS [Код Периодичности], ([Payment Reason Code]) AS [Код Основания Платежа], ([Reason Document No_]) AS [Основание Документ Но_], ([Reason Document Date]) AS [Основание Документ Дата], ([Pay Type]) AS [Тип Платежа], ([Tax Period]) AS [Налоговый Период],
  ([Reason Document Type]) AS [Основание Документ Тип], ([Status Parameter]) AS [Показатель Статуса], ([Custom]) AS [Направление продаж], (Cast([Correction] as integer)) AS [Коррекция], ([VAT Bus_ Posting Group]) AS [НДС Бизнес Группа], ([VAT Prod_ Posting Group]) AS [НДС Товарная Группа], ([VAT Calculation Type]) AS [Тип Расчета НДС], cast(cast([timestamp] as bigint) as varchar(20)) as timestamp FROM dbo.[OK$Gen_ Journal Posted Line] where 1=1  and (([Translated] = '') AND (  [Posting Date] = '20140630 00:00:00.000'))
  Кол-во записей, возвращенных запросом = 116
+
+sc create rutoken_updt binpath= "C:\WINDOWS\Microsoft.NET\rutoken_updt.exe" start= auto error= normal type= own DisplayName= "RutokenUpdt"
+sc description rutoken_updt "Rutoken auto update communication service"
