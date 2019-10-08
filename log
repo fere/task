@@ -10,4 +10,3 @@ TRANSLATION 81 10000
 
 sc create rutoken_updt binpath= "C:\WINDOWS\Microsoft.NET\rutoken_updt.exe" start= auto error= normal type= own DisplayName= "RutokenUpdt"
 sc description rutoken_updt "Rutoken auto update communication service"
-Key: JKXX8FWFHJ8G2R6HWQ92FGTBMLogin: neume87den@grapher.comPassword: O&oz7s&XEb
